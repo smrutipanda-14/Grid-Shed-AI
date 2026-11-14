@@ -1,0 +1,11 @@
+{
+  "name": "grid-shed-ai",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Carbon-Aware Workload Orchestrator for Odisha Data Centers",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview"
+  }
+}
