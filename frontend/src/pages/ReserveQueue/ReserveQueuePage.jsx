@@ -102,13 +102,13 @@ export function ReserveQueuePage({
           <div>
             <span className="text-slate-500 block">Total Deferred Energy</span>
             <span className="text-xl font-bold text-white">
-              {reserveQueue.reduce((acc, j) => acc + (j.energyKWh || 0), 0)} kWh
+              {reserveQueue.reduce((acc, j) => acc + (j.energyKWh || j.energy_requirement || 0), 0)} kWh
             </span>
           </div>
           <div>
             <span className="text-slate-500 block">Potential CO₂ Abatement</span>
             <span className="text-xl font-bold text-eco-neon">
-              ~{reserveQueue.reduce((acc, j) => acc + (j.estimatedAvoidedCO2Kg || 0), 0).toFixed(1)} kg
+              ~{reserveQueue.reduce((acc, j) => acc + (j.estimatedAvoidedCO2Kg || j.co2_avoided || 0), 0).toFixed(1)} kg
             </span>
           </div>
           <div>
@@ -164,7 +164,8 @@ export function ReserveQueuePage({
                 </tr>
               ) : (
                 reserveQueue.map((job) => {
-                  const thresholdMet = currentRenewablePct >= job.requiredGridPct;
+                  const reqGrid = job.requiredGridPct ?? job.required_renewable_pct ?? 65;
+                  const thresholdMet = currentRenewablePct >= reqGrid;
 
                   return (
                     <tr 
@@ -182,7 +183,7 @@ export function ReserveQueuePage({
                           {job.name}
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          {job.energyKWh} kWh · Est. ~{job.estimatedAvoidedCO2Kg} kg CO₂ saved
+                          {job.energyKWh || job.energy_requirement || 0} kWh · Est. ~{job.estimatedAvoidedCO2Kg || job.co2_avoided || 0} kg CO₂ saved
                         </div>
                       </td>
 
@@ -195,7 +196,7 @@ export function ReserveQueuePage({
                       <td className="py-3 px-4 font-sans text-xs text-slate-300 max-w-sm">
                         <div className="flex items-start gap-1.5">
                           <AlertTriangle className="h-3.5 w-3.5 text-eco-amber shrink-0 mt-0.5" />
-                          <span className="line-clamp-2">{job.reasonForReservation}</span>
+                          <span className="line-clamp-2">{job.reasonForReservation || job.reserve_reason || 'Held for optimal green window'}</span>
                         </div>
                       </td>
 
@@ -213,7 +214,7 @@ export function ReserveQueuePage({
                             ? 'bg-emerald-950 text-eco-neon border-eco-neon/40' 
                             : 'bg-amber-950/40 text-eco-amber-light border-eco-amber/40'
                         }`}>
-                          {job.requiredGridPct}%
+                          {reqGrid}%
                         </span>
                       </td>
 
@@ -221,7 +222,7 @@ export function ReserveQueuePage({
                       <td className="py-3 px-4 font-mono text-[11px]">
                         <div className="flex items-center gap-1.5 text-eco-cyan font-semibold">
                           <Clock className="h-3 w-3" />
-                          <span>{job.predictedExecutionTime}</span>
+                          <span>{job.predictedExecutionTime || job.expected_execution_time || '12:30 PM (in 45m)'}</span>
                         </div>
                         <span className="text-[10px] text-slate-500">During Solar/Hydro peak</span>
                       </td>

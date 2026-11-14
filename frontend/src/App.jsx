@@ -15,6 +15,8 @@ import {
   carbonSavingsSummary 
 } from './data/mockData';
 
+import { gridApi, jobsApi, analyticsApi } from './services/api';
+
 export function App() {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [gridMetrics, setGridMetrics] = useState(initialGridMetrics);
@@ -23,16 +25,16 @@ export function App() {
   const [reserveQueue, setReserveQueue] = useState(initialReserveQueue);
   const [savingsData, setSavingsData] = useState(carbonSavingsSummary);
   
-  // Re-evaluation countdown loop simulation (60s Celery task)
-  const [lastReevaluationSeconds, setLastReevaluationSeconds] = useState(48);
+  // Re-evaluation countdown loop simulation (30s / 60s Celery task)
+  const [lastReevaluationSeconds, setLastReevaluationSeconds] = useState(30);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Countdown timer for auto-reevaluation loop
+  // Countdown timer for auto-reevaluation loop visual indicator
   useEffect(() => {
     const timer = setInterval(() => {
       setLastReevaluationSeconds((prev) => {
         if (prev <= 1) {
-          return 60; // reset loop
+          return 30; // reset 30s Celery Beat loop
         }
         return prev - 1;
       });
@@ -41,27 +43,96 @@ export function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // Handler for adding a new job from Job Management Form
-  const handleAddJob = (newJob) => {
-    setJobs((prev) => [newJob, ...prev]);
+  // 3-Second Live Polling Loop with safe fallback
+  useEffect(() => {
+    let isMounted = true;
 
-    // If job was placed in Pending status, also place in Reserve Queue
-    if (newJob.status === 'Pending') {
+    const pollLiveData = async () => {
+      try {
+        const [liveGrid, forecast, liveJobs, reserved, savings] = await Promise.all([
+          gridApi.getLiveGrid(),
+          gridApi.getForecast(),
+          jobsApi.getJobs(),
+          jobsApi.getReservedJobs(),
+          analyticsApi.getSavings(),
+        ]);
+
+        if (isMounted) {
+          if (liveGrid) setGridMetrics(liveGrid);
+          if (forecast && Array.isArray(forecast) && forecast.length > 0) setTimelineData(forecast);
+          if (liveJobs && Array.isArray(liveJobs) && liveJobs.length > 0) setJobs(liveJobs);
+          if (reserved && Array.isArray(reserved)) setReserveQueue(reserved);
+          if (savings) setSavingsData(savings);
+        }
+      } catch (err) {
+        console.warn('[Polling] Background refresh fallback active:', err);
+      }
+    };
+
+    pollLiveData(); // Initial poll
+    const pollingInterval = setInterval(pollLiveData, 3000); // 3-second live polling
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollingInterval);
+    };
+  }, []);
+
+  // Handler for adding a new job from Job Management Form
+  const handleAddJob = async (newJobPayload) => {
+    try {
+      const created = await jobsApi.submitJob({
+        name: newJobPayload.name,
+        type: newJobPayload.type,
+        energy_requirement: newJobPayload.energy_requirement || newJobPayload.energyRequirement,
+        priority: newJobPayload.priority,
+        deadline: newJobPayload.deadline,
+        flexibility: newJobPayload.flexibility,
+      });
+
+      if (created) {
+        setJobs((prev) => [created, ...prev.filter((j) => j.id !== created.id)]);
+        if (created.status === 'Reserved' || created.status === 'Pending') {
+          const reserveItem = {
+            id: created.id,
+            name: created.name,
+            type: created.type,
+            priority: created.priority,
+            reasonForReservation: created.reserveReason || created.reserve_reason || 'Held for optimal green window',
+            currentGridPct: gridMetrics.renewablePctTotal,
+            requiredGridPct: created.required_renewable_pct || 65,
+            predictedExecutionTime: created.expectedExecutionTime || '12:30 PM (in 45m)',
+            deadline: created.deadline,
+            energyKWh: created.energyRequirement || created.energy_requirement,
+            estimatedAvoidedCO2Kg: Number(((created.energyRequirement || 450) * 0.28).toFixed(1)),
+          };
+          setReserveQueue((prev) => [reserveItem, ...prev.filter((j) => j.id !== reserveItem.id)]);
+        }
+        return created;
+      }
+    } catch (err) {
+      console.warn('[SubmitJob] Backend offline, using local state fallback');
+    }
+
+    // Local Fallback if offline
+    setJobs((prev) => [newJobPayload, ...prev]);
+    if (newJobPayload.status === 'Pending' || newJobPayload.status === 'Reserved') {
       const reserveItem = {
-        id: `RES-${Math.floor(600 + Math.random() * 300)}`,
-        name: newJob.name,
-        type: newJob.type,
-        priority: newJob.priority,
-        reasonForReservation: newJob.reserveReason || 'Held for optimal green window',
+        id: newJobPayload.id || `RES-${Math.floor(600 + Math.random() * 300)}`,
+        name: newJobPayload.name,
+        type: newJobPayload.type,
+        priority: newJobPayload.priority,
+        reasonForReservation: newJobPayload.reserveReason || 'Held for optimal green window',
         currentGridPct: gridMetrics.renewablePctTotal,
         requiredGridPct: 85,
         predictedExecutionTime: '12:30 PM (in 45m)',
-        deadline: newJob.deadline,
-        energyKWh: newJob.energyRequirement,
-        estimatedAvoidedCO2Kg: Number((newJob.energyRequirement * 0.28).toFixed(1)),
+        deadline: newJobPayload.deadline,
+        energyKWh: newJobPayload.energyRequirement || 450,
+        estimatedAvoidedCO2Kg: Number(((newJobPayload.energyRequirement || 450) * 0.28).toFixed(1)),
       };
       setReserveQueue((prev) => [reserveItem, ...prev]);
     }
+    return newJobPayload;
   };
 
   // Handler for manually overriding/forcing a reserved job to run
@@ -71,14 +142,14 @@ export function App() {
 
     // Add or promote to running in jobs list
     const runningJob = {
-      id: reservedJob.id.replace('RES-', 'JOB-'),
+      id: reservedJob.id.startsWith('RES-') ? reservedJob.id.replace('RES-', 'JOB-') : reservedJob.id,
       name: reservedJob.name,
       type: reservedJob.type,
       energyRequirement: reservedJob.energyKWh || 600,
       priority: reservedJob.priority,
       deadline: reservedJob.deadline,
       flexibility: 'Urgent',
-      status: 'Running',
+      status: 'Executing',
       progress: 12,
       submittedAt: new Date().toISOString(),
       executedAt: new Date().toISOString(),
@@ -89,8 +160,23 @@ export function App() {
   };
 
   // Handler for triggering green surge (simulates solar peak)
-  const handleTriggerSurge = () => {
+  const handleTriggerSurge = async () => {
     setIsSimulating(true);
+    try {
+      const updated = await gridApi.simulateGrid('Optimal');
+      if (updated) {
+        setGridMetrics(updated);
+        const [liveJobs, reserved] = await Promise.all([jobsApi.getJobs(), jobsApi.getReservedJobs()]);
+        if (liveJobs) setJobs(liveJobs);
+        if (reserved) setReserveQueue(reserved);
+        setIsSimulating(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('[Simulate] Backend offline, falling back to local simulation');
+    }
+
+    // Local Fallback simulation
     setTimeout(() => {
       setGridMetrics((prev) => ({
         ...prev,
@@ -107,16 +193,32 @@ export function App() {
         ],
       }));
       setIsSimulating(false);
-    }, 600);
+    }, 400);
   };
 
   // Handler for simulating grid fluctuation (e.g. cloud cover vs peak sun)
-  const handleSimulateFluctuation = () => {
+  const handleSimulateFluctuation = async () => {
     setIsSimulating(true);
+    const isCurrentlyLow = (gridMetrics?.currentCarbonIntensity ?? 184) < 220;
+    const targetScenario = isCurrentlyLow ? 'Moderate' : 'Optimal';
+
+    try {
+      const updated = await gridApi.simulateGrid(targetScenario);
+      if (updated) {
+        setGridMetrics(updated);
+        const [liveJobs, reserved] = await Promise.all([jobsApi.getJobs(), jobsApi.getReservedJobs()]);
+        if (liveJobs) setJobs(liveJobs);
+        if (reserved) setReserveQueue(reserved);
+        setIsSimulating(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('[Simulate] Backend offline, falling back to local fluctuation');
+    }
+
+    // Local Fallback simulation
     setTimeout(() => {
-      const isCurrentlyLow = gridMetrics.currentCarbonIntensity < 220;
       if (isCurrentlyLow) {
-        // Transition to moderate afternoon cloud cover
         setGridMetrics((prev) => ({
           ...prev,
           currentCarbonIntensity: 310,
@@ -132,11 +234,10 @@ export function App() {
           ],
         }));
       } else {
-        // Back to optimal green window
         setGridMetrics(initialGridMetrics);
       }
       setIsSimulating(false);
-    }, 500);
+    }, 400);
   };
 
   return (

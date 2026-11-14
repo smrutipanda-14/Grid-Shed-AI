@@ -44,65 +44,83 @@ export function JobManagementPage({
   // Predict decision
   const willExecuteImmediately = isGridGreen || flexibility === 'Urgent';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!jobName.trim()) return;
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const newJobId = `JOB-${Math.floor(1000 + Math.random() * 9000)}`;
-      const status = willExecuteImmediately ? 'Running' : 'Pending';
+    const newJobId = `JOB-${Math.floor(1000 + Math.random() * 9000)}`;
+    const status = willExecuteImmediately ? 'Executing' : 'Reserved';
 
-      const newJob = {
-        id: newJobId,
-        name: jobName,
-        type: jobType,
-        energyRequirement: Number(energyReq),
-        priority,
-        deadline,
-        flexibility,
-        status,
-        progress: status === 'Running' ? 5 : 0,
-        submittedAt: new Date().toISOString(),
-        executedAt: status === 'Running' ? new Date().toISOString() : null,
-        expectedExecutionTime: status === 'Running' ? 'Immediate' : 'Today, 12:30 PM (Green Window)',
-        reserveReason: status === 'Pending' ? 'Held for optimal 12:30 PM solar/hydro generation peak' : null,
-        nodesAllocated: Math.max(8, Math.round(Number(energyReq) / 40)),
-      };
+    const jobPayload = {
+      id: newJobId,
+      name: jobName,
+      type: jobType,
+      energy_requirement: Number(energyReq),
+      energyRequirement: Number(energyReq),
+      priority,
+      deadline,
+      flexibility,
+      status,
+      progress: willExecuteImmediately ? 5 : 0,
+      submittedAt: new Date().toISOString(),
+      executedAt: willExecuteImmediately ? new Date().toISOString() : null,
+      expectedExecutionTime: willExecuteImmediately ? 'Immediate' : 'Today, 12:30 PM (Green Window)',
+      reserveReason: !willExecuteImmediately ? 'Held for optimal 12:30 PM solar/hydro generation peak' : null,
+      nodesAllocated: Math.max(8, Math.round(Number(energyReq) / 40)),
+    };
 
-      onAddJob(newJob);
-      setIsSubmitting(false);
-      setSubmitFeedback({
-        id: newJobId,
-        name: jobName,
-        status,
-        decision: willExecuteImmediately ? 'EXECUTE NOW' : 'RESERVE JOB',
-        message: willExecuteImmediately
-          ? `Dispatched immediately! Grid is green (${currentRenewablePct}% renewables).`
-          : `Queued into Reserve Queue to curtail emissions. Will auto-dispatch during peak solar.`,
-      });
+    let createdJob = jobPayload;
+    if (onAddJob) {
+      try {
+        const res = await onAddJob(jobPayload);
+        if (res) createdJob = res;
+      } catch (err) {
+        console.warn("API add job fallback:", err);
+      }
+    }
 
-      // Reset form
-      setJobName('');
-      setEnergyReq(450);
+    const isRunning = createdJob.status === 'Running' || createdJob.status === 'Executing';
 
-      // Dismiss feedback after 6 seconds
-      setTimeout(() => setSubmitFeedback(null), 6000);
-    }, 400);
+    setIsSubmitting(false);
+    setSubmitFeedback({
+      id: createdJob.id || newJobId,
+      name: createdJob.name || jobName,
+      status: isRunning ? 'Running' : 'Pending',
+      decision: isRunning ? 'EXECUTE NOW' : 'RESERVE JOB',
+      message: isRunning
+        ? `Dispatched immediately! Grid is green (${currentRenewablePct}% renewables).`
+        : `Queued into Reserve Queue to curtail emissions. Will auto-dispatch during peak solar.`,
+    });
+
+    // Reset form
+    setJobName('');
+    setEnergyReq(450);
+
+    // Dismiss feedback after 6 seconds
+    setTimeout(() => setSubmitFeedback(null), 6000);
   };
 
   // Filtered jobs
+  const isStatusMatch = (jobStatus, filter) => {
+    if (filter === 'ALL') return true;
+    if (filter === 'Running') return jobStatus === 'Running' || jobStatus === 'Executing';
+    if (filter === 'Pending') return jobStatus === 'Pending' || jobStatus === 'Reserved';
+    if (filter === 'Completed') return jobStatus === 'Completed';
+    return jobStatus === filter;
+  };
+
   const filteredJobs = jobs.filter((job) => {
-    const matchesFilter = activeTabFilter === 'ALL' || job.status === activeTabFilter;
+    const matchesFilter = isStatusMatch(job.status, activeTabFilter);
     const matchesSearch = job.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           job.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           job.type.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
-  const runningCount = jobs.filter(j => j.status === 'Running').length;
-  const pendingCount = jobs.filter(j => j.status === 'Pending').length;
+  const runningCount = jobs.filter(j => j.status === 'Running' || j.status === 'Executing').length;
+  const pendingCount = jobs.filter(j => j.status === 'Pending' || j.status === 'Reserved').length;
   const completedCount = jobs.filter(j => j.status === 'Completed').length;
 
   return (

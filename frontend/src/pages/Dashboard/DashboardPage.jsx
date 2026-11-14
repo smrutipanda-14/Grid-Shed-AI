@@ -20,7 +20,7 @@ export function DashboardPage({
   reserveQueue = [],
   onNavigate 
 }) {
-  const runningJobsCount = jobs.filter(j => j.status === 'Running').length;
+  const runningJobsCount = jobs.filter(j => j.status === 'Running' || j.status === 'Executing').length;
   const reservedJobsCount = reserveQueue.length;
 
   return (
