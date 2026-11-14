@@ -19,11 +19,9 @@ The backend uses SQLite by default, so you do not need to install or configure a
 If you have not already downloaded the project, clone it and move into its folder:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/smrutipanda-14/Grid-Shed-AI.git
 cd Grid-Shed-AI
 ```
-
-Replace `<repository-url>` with the repository's Git URL.
 
 ### 2. Install backend dependencies
 
@@ -54,7 +52,7 @@ Keep the virtual environment activated in the terminal where you run the backend
 Open another terminal at the project root and run:
 
 ```bash
-npm ci --prefix frontend
+npm install
 ```
 
 ## Run the project
