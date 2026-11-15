@@ -6,62 +6,47 @@
   body {
     background-color: #070b0e;
     color: #e2e8f0;
-    overflow-x: hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom sleek dark scrollbar */
+  /* Sleek minimalist scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
-    background: #0c1319;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1c2e3d;
-    border-radius: 3px;
+    background: #1a2733;
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #00ff87;
   }
 }
 
-/* Glass & Glow utilities */
-.eco-glass {
-  background: rgba(17, 27, 35, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(28, 46, 61, 0.8);
+/* Minimalist Eco-Card styling */
+.eco-card-clean {
+  background-color: #0c1319;
+  border: 1px solid #1a2733;
+  border-radius: 0.875rem;
+  transition: all 0.2s ease;
 }
 
-.eco-glass-card {
-  background: linear-gradient(135deg, rgba(17, 27, 35, 0.85) 0%, rgba(12, 19, 25, 0.95) 100%);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(28, 46, 61, 0.85);
-  transition: all 0.25s ease-in-out;
+.eco-card-clean:hover {
+  border-color: #243545;
 }
 
-.eco-glass-card:hover {
-  border-color: rgba(0, 255, 135, 0.3);
-  box-shadow: 0 8px 24px -6px rgba(0, 255, 135, 0.08);
-}
-
-/* Grid background texture */
-.cyber-grid {
-  background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(28, 46, 61, 0.25) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(28, 46, 61, 0.25) 1px, transparent 1px);
-}
-
-/* Custom Recharts Tooltip styling */
+/* Minimalist Recharts Tooltip */
 .recharts-default-tooltip {
-  background-color: #111b23 !important;
-  border: 1px solid #1c2e3d !important;
+  background-color: #0c1319 !important;
+  border: 1px solid #1a2733 !important;
   border-radius: 8px !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
   padding: 8px 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
 }
 
 .recharts-tooltip-item {

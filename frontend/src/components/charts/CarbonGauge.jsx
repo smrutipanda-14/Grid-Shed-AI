@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, ArrowDownRight, ArrowUpRight, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Leaf, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { StatusBadge } from '../common/StatusBadge';
 
 export function CarbonGauge({ 
@@ -9,126 +9,88 @@ export function CarbonGauge({
   gridStatus = 'Optimal',
   delta = -18.4 
 }) {
-  // Max scale is 600 gCO2/kWh
   const maxScale = 600;
   const clampedValue = Math.min(Math.max(currentCarbon, 0), maxScale);
   const percentage = (clampedValue / maxScale) * 100;
   
-  // Angle for semi-circle: 180 degrees (from -90 to +90 or 180 arc)
-  // Let's use SVG circle arc:
-  // Radius = 85, Circumference of full circle = 2 * PI * 85 = 534.07
-  // Semi-circle arc = 267.0
-  const radius = 80;
-  const strokeWidth = 14;
-  const normalizedRadius = radius - strokeWidth * 0.5;
-  const circumference = normalizedRadius * 2 * Math.PI;
-  // We use half-circle (180deg) for the gauge
-  const semiCircumference = circumference / 2;
-  const strokeDashoffset = semiCircumference - (percentage / 100) * semiCircumference;
+  // Clean semi-circle arc calculation
+  // Radius = 76, arc length = PI * 76 = 238.76
+  const arcLength = 238.76;
+  const strokeDashoffset = arcLength - (percentage / 100) * arcLength;
 
-  // Determine dynamic color based on carbon level
   let gaugeColor = '#00ff87';
-  let gaugeGlow = 'rgba(0, 255, 135, 0.4)';
-  let carbonRating = 'Ultra-Clean (Solar+Hydro Peak)';
-  
+  let gaugeGlowClass = 'text-eco-neon';
+  let statusText = 'Low Carbon Intensity';
+
   if (currentCarbon > 350) {
     gaugeColor = '#ef4444';
-    gaugeGlow = 'rgba(239, 68, 68, 0.4)';
-    carbonRating = 'High Carbon (Thermal Surge)';
+    gaugeGlowClass = 'text-eco-red-light';
+    statusText = 'Fossil-Heavy Reliance';
   } else if (currentCarbon > 220) {
     gaugeColor = '#f59e0b';
-    gaugeGlow = 'rgba(245, 158, 11, 0.4)';
-    carbonRating = 'Moderate Intensity';
+    gaugeGlowClass = 'text-eco-amber-light';
+    statusText = 'Moderate Carbon Intensity';
   }
 
   return (
-    <div className="eco-glass-card rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
-      {/* Background ambient glow */}
-      <div 
-        className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl pointer-events-none opacity-20"
-        style={{ backgroundColor: gaugeColor }}
-      />
-
-      {/* Top Header */}
-      <div className="flex items-start justify-between">
+    <div className="eco-card-clean p-6 flex flex-col justify-between h-full">
+      {/* Sleek Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-eco-border/40">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-eco-neon/15 text-eco-neon border border-eco-neon/30">
-              <Leaf className="h-4 w-4" />
-            </span>
-            <h3 className="font-semibold text-white text-base tracking-wide">Live Carbon Intensity</h3>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">GRIDCO Odisha Real-Time Marginal Emission</p>
+          <h3 className="text-sm font-medium text-white tracking-tight">Live Carbon Intensity</h3>
+          <p className="text-xs text-eco-muted mt-0.5 font-mono">GRIDCO Odisha Real-Time Marginal</p>
         </div>
-
-        <div className="flex flex-col items-end gap-1">
-          <StatusBadge status={gridStatus} pulse />
-          <span className="text-[10px] font-mono text-slate-500">
-            Freq: <span className="text-eco-cyan font-bold">{gridFrequency.toFixed(2)} Hz</span>
-          </span>
-        </div>
+        <StatusBadge status={gridStatus} pulse />
       </div>
 
-      {/* SVG Semi-Circle Gauge */}
-      <div className="relative flex flex-col items-center justify-center my-4">
-        <svg 
-          viewBox="0 0 200 120" 
-          className="w-64 h-36 overflow-visible"
-        >
+      {/* Sleek Semi-Circle Gauge */}
+      <div className="relative flex flex-col items-center justify-center my-3">
+        <svg viewBox="0 0 200 115" className="w-56 h-32 overflow-visible">
           <defs>
-            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="sleekGaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#00ff87" />
               <stop offset="50%" stopColor="#00f0ff" />
-              <stop offset="75%" stopColor="#f59e0b" />
+              <stop offset="80%" stopColor="#f59e0b" />
               <stop offset="100%" stopColor="#ef4444" />
             </linearGradient>
-            <filter id="gaugeShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={gaugeGlow} />
+            <filter id="gaugeSoftGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor={gaugeColor} floodOpacity="0.4" />
             </filter>
           </defs>
 
-          {/* Background track (semi-circle) */}
+          {/* Background Track */}
           <path
-            d="M 20 110 A 80 80 0 0 1 180 110"
+            d="M 24 105 A 76 76 0 0 1 176 105"
             fill="none"
-            stroke="#1c2e3d"
-            strokeWidth={strokeWidth}
+            stroke="#16222d"
+            strokeWidth="9"
             strokeLinecap="round"
           />
 
-          {/* Green Window target band (approx 100 to 220 gCO2) */}
+          {/* Active Arc */}
           <path
-            d="M 20 110 A 80 80 0 0 1 80 40"
-            fill="none"
-            stroke="rgba(0, 255, 135, 0.15)"
-            strokeWidth={strokeWidth + 4}
-            strokeLinecap="butt"
-          />
-
-          {/* Active progress arc */}
-          <path
-            d="M 20 110 A 80 80 0 0 1 180 110"
+            d="M 24 105 A 76 76 0 0 1 176 105"
             fill="none"
             stroke={gaugeColor}
-            strokeWidth={strokeWidth}
+            strokeWidth="9"
             strokeLinecap="round"
-            strokeDasharray={251.3}
-            strokeDashoffset={251.3 - (percentage / 100) * 251.3}
-            filter="url(#gaugeShadow)"
+            strokeDasharray={arcLength}
+            strokeDashoffset={strokeDashoffset}
+            filter="url(#gaugeSoftGlow)"
             className="transition-all duration-700 ease-out"
           />
 
-          {/* Scale labels */}
-          <text x="18" y="125" fill="#64748b" fontSize="9" fontFamily="monospace">0</text>
-          <text x="94" y="22" fill="#64748b" fontSize="9" fontFamily="monospace">300</text>
-          <text x="175" y="125" fill="#64748b" fontSize="9" fontFamily="monospace">600</text>
+          {/* Scale Labels */}
+          <text x="22" y="120" fill="#64748b" fontSize="9" fontFamily="monospace">0</text>
+          <text x="94" y="24" fill="#64748b" fontSize="9" fontFamily="monospace">300</text>
+          <text x="170" y="120" fill="#64748b" fontSize="9" fontFamily="monospace">600</text>
         </svg>
 
         {/* Center Metric Display */}
-        <div className="absolute bottom-1 flex flex-col items-center">
+        <div className="absolute bottom-1 flex flex-col items-center text-center">
           <div className="flex items-baseline gap-1">
             <span 
-              className="text-4xl font-extrabold font-mono tracking-tight transition-colors duration-500"
+              className="text-3xl font-bold font-mono tracking-tight"
               style={{ color: gaugeColor }}
             >
               {currentCarbon}
@@ -136,32 +98,25 @@ export function CarbonGauge({
             <span className="text-xs font-mono text-slate-400">gCO₂/kWh</span>
           </div>
 
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={`inline-flex items-center text-xs font-mono font-medium ${delta < 0 ? 'text-eco-neon' : 'text-eco-red-light'}`}>
-              {delta < 0 ? (
-                <ArrowDownRight className="h-3.5 w-3.5" />
-              ) : (
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              )}
+          <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[11px]">
+            <span className={`inline-flex items-center font-medium ${delta < 0 ? 'text-eco-neon' : 'text-eco-red-light'}`}>
+              {delta < 0 ? <ArrowDownRight className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
               {Math.abs(delta)}%
             </span>
-            <span className="text-[11px] text-slate-500">vs 24h avg</span>
+            <span className="text-slate-500">vs 24h baseline</span>
           </div>
         </div>
       </div>
 
-      {/* Footer Metrics */}
-      <div className="pt-3 border-t border-eco-border/80 flex items-center justify-between text-xs">
+      {/* Sleek Footer */}
+      <div className="pt-3 border-t border-eco-border/40 flex items-center justify-between text-xs font-mono">
         <div className="flex items-center gap-2">
-          <span 
-            className="w-2 h-2 rounded-full" 
-            style={{ backgroundColor: gaugeColor }}
-          />
-          <span className="text-slate-300 font-medium text-xs truncate max-w-[210px]">{carbonRating}</span>
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: gaugeColor }} />
+          <span className="text-slate-300 font-sans text-xs">{statusText}</span>
         </div>
-        <div className="text-right font-mono text-[11px] text-slate-400">
-          Target: &lt; <span className="text-eco-neon font-bold">{threshold}</span> g
-        </div>
+        <span className="text-slate-500 text-[11px]">
+          Target: &lt; <span className="text-eco-neon font-medium">{threshold}g</span>
+        </span>
       </div>
     </div>
   );

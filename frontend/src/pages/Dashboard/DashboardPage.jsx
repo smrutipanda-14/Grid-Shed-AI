@@ -1,100 +1,80 @@
 import React from 'react';
 import { CarbonGauge } from '../../components/charts/CarbonGauge';
-import { RenewableMixDonut } from '../../components/charts/RenewableMixDonut';
 import { CarbonTimelineChart } from '../../components/charts/CarbonTimelineChart';
 import { WeatherCorrelator } from '../../components/charts/WeatherCorrelator';
-import { 
-  Zap, 
-  Cpu, 
-  ShieldCheck, 
-  Clock, 
-  Leaf, 
-  AlertTriangle,
-  ArrowRight
-} from 'lucide-react';
+import { StatusBadge } from '../../components/common/StatusBadge';
+import { ArrowDownRight, ArrowRight, Clock, ShieldCheck, Sun } from 'lucide-react';
 
 export function DashboardPage({ 
   gridMetrics, 
   timelineData, 
-  jobs = [], 
-  reserveQueue = [],
   onNavigate 
 }) {
-  const runningJobsCount = jobs.filter(j => j.status === 'Running' || j.status === 'Executing').length;
-  const reservedJobsCount = reserveQueue.length;
-
   return (
     <div className="space-y-6">
-      {/* Top Banner: Grid Status & Executive Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1 */}
-        <div className="eco-glass-card rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-mono text-slate-400">Data Center Power Draw</span>
-            <div className="text-2xl font-bold font-mono text-white mt-1">
-              {gridMetrics?.dataCenterDrawMW ?? 142.5} <span className="text-sm font-normal text-slate-400">MW</span>
-            </div>
-            <span className="text-[11px] font-mono text-eco-neon mt-0.5 block">
-              98.2% Green Power Match
+      {/* Top Focused Stat Row - Clean, minimal, ample negative space */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Stat 1: Live Carbon Intensity */}
+        <div className="eco-card-clean p-5">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+            <span>Carbon Intensity</span>
+            <span className="flex items-center text-eco-neon text-[11px] font-medium">
+              <ArrowDownRight className="h-3 w-3 mr-0.5" />
+              18.4% vs 24h avg
             </span>
           </div>
-          <div className="p-3 rounded-lg bg-eco-neon/10 border border-eco-neon/30 text-eco-neon">
-            <Zap className="h-5 w-5" />
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-mono font-bold text-white">
+              {gridMetrics?.currentCarbonIntensity ?? 184}
+            </span>
+            <span className="text-xs font-mono text-slate-400">gCO₂/kWh</span>
           </div>
+          <p className="text-[11px] text-slate-500 mt-2 font-mono">
+            GRIDCO Odisha marginal telemetry
+          </p>
         </div>
 
-        {/* Metric 2 */}
-        <div className="eco-glass-card rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-mono text-slate-400">Active Workloads</span>
-            <div className="text-2xl font-bold font-mono text-white mt-1">
-              {runningJobsCount} <span className="text-sm font-normal text-slate-400">Executing</span>
-            </div>
-            <span className="text-[11px] font-mono text-eco-cyan mt-0.5 block">
-              88 Compute Nodes Busy
+        {/* Stat 2: Grid Stability Badge & Frequency */}
+        <div className="eco-card-clean p-5">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+            <span>Grid Stability</span>
+            <StatusBadge status={gridMetrics?.gridStatus || 'Optimal'} pulse size="sm" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-mono font-bold text-eco-cyan">
+              {gridMetrics?.gridFrequency?.toFixed(2) ?? '50.02'}
             </span>
+            <span className="text-xs font-mono text-slate-400">Hz</span>
           </div>
-          <div className="p-3 rounded-lg bg-eco-cyan/10 border border-eco-cyan/30 text-eco-cyan">
-            <Cpu className="h-5 w-5" />
-          </div>
+          <p className="text-[11px] text-slate-500 mt-2 font-mono">
+            Nominal frequency (~50Hz sync)
+          </p>
         </div>
 
-        {/* Metric 3 */}
-        <div className="eco-glass-card rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-mono text-slate-400">Reserve Queue (Curtailed)</span>
-            <div className="text-2xl font-bold font-mono text-eco-amber-light mt-1">
-              {reservedJobsCount} <span className="text-sm font-normal text-slate-400">Delayed</span>
-            </div>
-            <span className="text-[11px] font-mono text-slate-400 mt-0.5 block">
-              Saving peak thermal draw
+        {/* Stat 3: Green Window Horizon */}
+        <div className="eco-card-clean p-5">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
+            <span>Dispatch Window</span>
+            <span className="text-eco-neon text-[11px] font-mono flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-eco-neon animate-pulse" />
+              Active
             </span>
           </div>
-          <div className="p-3 rounded-lg bg-eco-amber/10 border border-eco-amber/30 text-eco-amber">
-            <Clock className="h-5 w-5" />
-          </div>
-        </div>
-
-        {/* Metric 4 */}
-        <div className="eco-glass-card rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-mono text-slate-400">Odisha Grid Stability</span>
-            <div className="text-2xl font-bold font-mono text-eco-neon mt-1">
-              {gridMetrics?.gridFrequency?.toFixed(2) ?? 50.02} <span className="text-sm font-normal text-slate-400">Hz</span>
-            </div>
-            <span className="text-[11px] font-mono text-eco-neon mt-0.5 block">
-              Phase Angle Synchronized
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-mono font-bold text-white">
+              10 AM – 3 PM
             </span>
+            <span className="text-xs font-mono text-eco-neon font-medium">Green Window</span>
           </div>
-          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-eco-neon">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
+          <p className="text-[11px] text-slate-500 mt-2 font-mono">
+            Lowest carbon intensity generation hours
+          </p>
         </div>
       </div>
 
-      {/* Row 1: Live Carbon Gauge & Renewable Mix Donut */}
+      {/* Row 1: Sleek Live Carbon Intensity Gauge & Weather/Solar Correlator Sparklines */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-5">
           <CarbonGauge 
             currentCarbon={gridMetrics.currentCarbonIntensity}
             threshold={gridMetrics.carbonThreshold}
@@ -104,53 +84,38 @@ export function DashboardPage({
           />
         </div>
 
-        <div className="lg:col-span-6">
-          <RenewableMixDonut 
-            mix={gridMetrics.mix}
-            renewableTotal={gridMetrics.renewablePctTotal}
-            totalLoadMW={gridMetrics.totalGridLoadMW}
-          />
+        <div className="lg:col-span-7">
+          <WeatherCorrelator weather={gridMetrics.weather} />
         </div>
       </div>
 
-      {/* Row 2: 24-Hour Carbon Timeline Forecasting & Green Windows */}
+      {/* Row 2: 24-Hour Carbon Timeline (Line Chart with Green Window Shading) */}
       <div>
         <CarbonTimelineChart data={timelineData} />
       </div>
 
-      {/* Row 3: Weather & Solar Irradiance Correlator with Sparklines */}
-      <div>
-        <WeatherCorrelator weather={gridMetrics.weather} />
-      </div>
-
-      {/* Bottom Action Ribbon */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-eco-surface via-eco-card to-eco-surface border border-eco-border flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Minimal Bottom Action Ribbon */}
+      <div className="p-4 rounded-xl border border-eco-border/60 bg-eco-surface/50 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-eco-neon/15 text-eco-neon">
-            <Leaf className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white">
-              Green Window Active: 10:00 AM – 3:00 PM Peak Generation Window
-            </p>
-            <p className="text-xs text-slate-400">
-              Hirakud Hydro and Sambalpur Solar PV are dispatching maximum zero-carbon energy.
-            </p>
-          </div>
+          <div className="w-2 h-2 rounded-full bg-eco-neon shrink-0 animate-pulse" />
+          <p className="text-xs text-slate-300 font-mono">
+            Grid condition is <strong className="text-eco-neon">Optimal</strong>. Solar and hydro surplus currently active for scheduled compute.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigate('jobs')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-eco-neon text-eco-darkest text-xs font-mono font-bold hover:bg-eco-neon/90 transition-all shadow-neon-green-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-eco-neon text-eco-darkest text-xs font-mono font-bold hover:bg-eco-neon/90 transition-all shadow-neon-green-sm"
           >
-            Submit Workload <ArrowRight className="h-3.5 w-3.5" />
+            <span>Submit Workload</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => onNavigate('reserve')}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-eco-surface border border-eco-border text-slate-300 text-xs font-mono hover:text-white hover:border-slate-500 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-eco-border bg-eco-surface text-slate-300 hover:text-white hover:border-slate-500 text-xs font-mono transition-colors"
           >
-            View Reserved Jobs ({reservedJobsCount})
+            Reserve Queue
           </button>
         </div>
       </div>
