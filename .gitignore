@@ -84,8 +84,4 @@ Desktop.ini
 *.joblib
 !backend/app/ml/model.joblib
 
-
-@PRD.md
-@Tech stack.md
-@Architecture.md
-@grid_shield_ai.md
+*.md
