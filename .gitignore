@@ -84,5 +84,12 @@ Desktop.ini
 *.joblib
 !backend/app/ml/model.joblib
 
+# --- Documentation (Keep README.md public, ignore internal specs) ---
 *.md
 !README.md
+PRD.md
+*prd*.md
+Tech stack.md
+PRD.md
+*prd*.md
+Tech stack.md
