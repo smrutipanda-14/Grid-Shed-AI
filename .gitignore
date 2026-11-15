@@ -83,3 +83,9 @@ Desktop.ini
 # --- Model Artifacts (Keep Pre-Trained model.joblib) ---
 *.joblib
 !backend/app/ml/model.joblib
+
+
+PRD.md
+Tech stack.md
+Architecture.md
+grid_shield_ai.md
