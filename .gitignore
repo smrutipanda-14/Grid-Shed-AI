@@ -85,3 +85,4 @@ Desktop.ini
 !backend/app/ml/model.joblib
 
 *.md
+!README.md
